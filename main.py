@@ -63,16 +63,11 @@ class Parser:
                 time.sleep(2)
                 bs = BeautifulSoup(self.get_html(url), 'lxml')
 
-                # Надо собрать один полный документ по одному проекту и сделать сразу запись в бд.
-
-                # * Добавлять данные во временное хранилище вроде vedis.
-                # * Добавить логгирование , где будет указано , что данные успешно получены.
-                # * Под каждый итем открывать отдельный тред и посмотреть на производительность.
-                # ** Попробовать использовать вместо генератора списка генератор словарей , чтобы конце их просто смержить.
                 # Get ico full description links.
                 ico_full_desc_links = bs.findAll('a', {'class': 'ico-link'})
                 ico_full_desc_links = [ico_link['href'] for ico_link in ico_full_desc_links]
 
+                # Check on clear list.
                 if not ico_full_desc_links:
                     print('page #{} not exist'.format(count))
                     del documents[0]
@@ -111,7 +106,17 @@ class Parser:
                 ico_stars_ratings = bs.findAll('i', {'class': re.compile('[star] \w{0,4}')})
                 ico_stars_ratings = [ico_stars_rating['class'] for ico_stars_rating in ico_stars_ratings]
                 ico_stars_ratings = libs.utils.run_rate_transform(ico_stars_ratings)
-                print(ico_stars_ratings)
+
+                # Convert category title. Заменить пробельные и другие левые символы на _
+                title = libs.utils.clear_title(documents[0]['title'])
+
+                # Insert data into db.
+                for i in range(0, len(ico_full_desc_links)):
+                    self.mongo.insert_one({'ico_full_desc_link': ico_full_desc_links[i], 'img_src': imgs_src[i],
+                                           'ico_name': ico_names[i], 'updated_date': updated_dates[i],
+                                           'ico_text': ico_texts[i], 'ico_status': ico_statuses[i],
+                                           'ico_date': ico_dates[i], 'ico_text_rating': ico_text_ratings[i],
+                                           'ico_star_rating': ico_stars_ratings[i]}, title)
 
                 count += 1
                 url = self.ICO_LIST_PAGINATION_URL.format(documents[0]['cat_num'], count)
@@ -119,11 +124,11 @@ class Parser:
 
     def run(self):
         """
-        Method which start parsing all ico categories and then data for all categories.
+        Method which start parsing all ico categories and then data from all categories.
         :return:
         """
-        self.parse_all_cats()
-        self.parse_cats_data(self.get_cats_documents())
+        self.parse_all_cats()                               # Parse all ico categories.
+        self.parse_cats_data(self.get_cats_documents())     # Parse data from all categories.
 
 
 if __name__ == '__main__':

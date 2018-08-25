@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import re
 
 
 # Func which converting text rate like ['star', 'full'] into int like 1
@@ -35,6 +36,7 @@ def run_rate_transform(ico_stars_ratings):
     return final_lst
 
 
+# Func which creating categories data list from bsobj.
 def create_cats_data_list(bsobj_cats):
     data = []
     cat_num = 0
@@ -44,3 +46,15 @@ def create_cats_data_list(bsobj_cats):
         data.append({'title': cat['title'], 'link': cat['href'], 'cat_num': cat_num})
 
     return data
+
+
+# Func which replace whitespaces and & to _.
+def clear_title(cat_title):
+    pattern = re.compile(r'&')
+
+    try:
+        re.search(pattern, cat_title).group()
+        return cat_title.replace('&', '_').replace(' ', '')
+
+    except AttributeError:
+        return cat_title.replace(' ', '_')
