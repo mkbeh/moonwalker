@@ -33,3 +33,14 @@ def run_rate_transform(ico_stars_ratings):
     final_lst = list(map(list_sum, splitted_list))                              # sum sub lists values.
 
     return final_lst
+
+
+def create_cats_data_list(bsobj_cats):
+    data = []
+    cat_num = 0
+
+    for cat in bsobj_cats:
+        cat_num += 1
+        data.append({'title': cat['title'], 'link': cat['href'], 'cat_num': cat_num})
+
+    return data
