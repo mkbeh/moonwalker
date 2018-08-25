@@ -17,15 +17,42 @@ class Parser:
 
     @staticmethod
     def get_html(url):
+        """
+        Method which send GET request to specific url and return html.
+        :param url:
+        :return:
+        """
         time.sleep(2)
         html = requests.get(url).content
 
         return html
 
+    def parse_all_cats(self):
+        """
+        Method which parse categories urls , titles, add index number and insert them into db.
+        :return:
+        """
+        bs = BeautifulSoup(self.get_html(self.ICO_LIST_URL), 'lxml')
+        cats = bs.findAll('a', {'class': 'filter-seo-link'})
+
+        data = libs.utils.create_cats_data_list(cats)                       # Create cats data list.
+
+        [self.mongo.insert_one(item, 'cats_icobazaar') for item in data]    # Insert data into db.
+        self.mongo.finish()
+
     def get_cats_documents(self):
+        """
+        Method which get categories documents from db and return them.
+        :return:
+        """
         return self.mongo.find({}, 'cats_icobazaar')
 
-    def parse_cat(self, documents):
+    def parse_cats_data(self, documents):
+        """
+        Method which parse data for all categories and insert them into db.
+        :param documents:
+        :return:
+        """
         # One iteration == one category.
         while len(documents) > 0:
             url = documents[0]['link']
@@ -90,18 +117,13 @@ class Parser:
                 url = self.ICO_LIST_PAGINATION_URL.format(documents[0]['cat_num'], count)
                 print(url)
 
-    def parse_all_cats(self):
-        bs = BeautifulSoup(self.get_html(self.ICO_LIST_URL), 'lxml')
-        cats = bs.findAll('a', {'class': 'filter-seo-link'})
-
-        data = libs.utils.create_cats_data_list(cats)                       # Create cats data list.
-
-        [self.mongo.insert_one(item, 'cats_icobazaar') for item in data]    # Insert data into db.
-        self.mongo.finish()
-
     def run(self):
+        """
+        Method which start parsing all ico categories and then data for all categories.
+        :return:
+        """
         self.parse_all_cats()
-        self.parse_cat(self.get_cats_documents())
+        self.parse_cats_data(self.get_cats_documents())
 
 
 if __name__ == '__main__':
