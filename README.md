@@ -1,2 +1,2 @@
-# moonwalker
-icobazaar parser
+# Moonwalker
+ICO bazaar server parser.
