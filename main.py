@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 import time
 import re
-import requests
+import cProfile
 
+from multiprocessing import Process, Queue
+
+import requests
 import libs.utils
 
 from bs4 import BeautifulSoup
 from libs.pymongodb import pymongodb
+from torrequest import TorRequest
 
 
 class Parser:
@@ -23,7 +27,16 @@ class Parser:
         :return:
         """
         time.sleep(2)
-        html = requests.get(url).content
+
+        try:
+            html = requests.get(url, timeout=(3.05, 27), stream=True).content
+            print(html)
+        except Exception as e:
+            print(e)
+
+            with TorRequest(proxy_port=9050, ctrl_port=9051, password=None) as tr:
+                tr.reset_identity()
+                html = tr.get(url, timeout=(3.05, 27), stream=True).content
 
         return html
 
@@ -57,7 +70,6 @@ class Parser:
         while len(documents) > 0:
             url = documents[0]['link']
             count = 1
-            print(url)
 
             while True:
                 time.sleep(2)
@@ -71,10 +83,10 @@ class Parser:
                 if not ico_full_desc_links:
                     print('page #{} not exist'.format(count))
                     del documents[0]
+
                     break
 
                 # Get ico logos.
-                # * Скачивать по линку и записывать бинарки в файл.
                 imgs_src = bs.findAll('div', {'class': 'ico-image'})
                 imgs_src = [img_url.find('img')['src'] for img_url in imgs_src]
 
@@ -107,7 +119,7 @@ class Parser:
                 ico_stars_ratings = [ico_stars_rating['class'] for ico_stars_rating in ico_stars_ratings]
                 ico_stars_ratings = libs.utils.run_rate_transform(ico_stars_ratings)
 
-                # Convert category title. Заменить пробельные и другие левые символы на _
+                # Clear category title. Change symbols in collections names (%^* etc) to _.
                 title = libs.utils.clear_title(documents[0]['title'])
 
                 # Insert data into db.
@@ -120,7 +132,6 @@ class Parser:
 
                 count += 1
                 url = self.ICO_LIST_PAGINATION_URL.format(documents[0]['cat_num'], count)
-                print(url)
 
     def run(self):
         """
@@ -132,7 +143,5 @@ class Parser:
 
 
 if __name__ == '__main__':
-    Parser().run()
-
-
-# cProfile.run('main()')
+    # Parser().run()
+    cProfile.run('Parser().run()')
