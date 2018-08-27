@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import time
 import re
-import cProfile
 
-from multiprocessing import Process, Queue
+from multiprocessing import Process
 
 import requests
 import libs.utils
@@ -30,7 +29,6 @@ class Parser:
 
         try:
             html = requests.get(url, timeout=(3.05, 27), stream=True).content
-            print(html)
         except Exception as e:
             print(e)
 
@@ -66,9 +64,8 @@ class Parser:
         :param documents:
         :return:
         """
-        # One iteration == one category.
-        while len(documents) > 0:
-            url = documents[0]['link']
+        # Написать код для парсинга одоной отдельной категории.
+        def parse(url, cat_num, title):
             count = 1
 
             while True:
@@ -82,7 +79,6 @@ class Parser:
                 # Check on clear list.
                 if not ico_full_desc_links:
                     print('page #{} not exist'.format(count))
-                    del documents[0]
 
                     break
 
@@ -120,18 +116,34 @@ class Parser:
                 ico_stars_ratings = libs.utils.run_rate_transform(ico_stars_ratings)
 
                 # Clear category title. Change symbols in collections names (%^* etc) to _.
-                title = libs.utils.clear_title(documents[0]['title'])
+                title2 = libs.utils.clear_title(title)
+
+                mongo = pymongodb.MongoDB('icobazaar')
 
                 # Insert data into db.
                 for i in range(0, len(ico_full_desc_links)):
-                    self.mongo.insert_one({'ico_full_desc_link': ico_full_desc_links[i], 'img_src': imgs_src[i],
-                                           'ico_name': ico_names[i], 'updated_date': updated_dates[i],
-                                           'ico_text': ico_texts[i], 'ico_status': ico_statuses[i],
-                                           'ico_date': ico_dates[i], 'ico_text_rating': ico_text_ratings[i],
-                                           'ico_star_rating': ico_stars_ratings[i]}, title)
+                    mongo.insert_one({'ico_full_desc_link': ico_full_desc_links[i], 'img_src': imgs_src[i],
+                                      'ico_name': ico_names[i], 'updated_date': updated_dates[i],
+                                      'ico_text': ico_texts[i], 'ico_status': ico_statuses[i],
+                                      'ico_date': ico_dates[i], 'ico_text_rating': ico_text_ratings[i],
+                                      'ico_star_rating': ico_stars_ratings[i]}, title2)
+                    mongo.finish()
 
                 count += 1
-                url = self.ICO_LIST_PAGINATION_URL.format(documents[0]['cat_num'], count)
+                url = self.ICO_LIST_PAGINATION_URL.format(cat_num, count)
+
+        urls_list = []
+        cats_nums = []
+        titles_list = []
+
+        for item in documents:
+            urls_list.append(item['link'])
+            cats_nums.append(item['cat_num'])
+            titles_list.append(item['title'])
+
+        for url, cat_num, title in zip(urls_list, cats_nums, titles_list):
+            # foo(url, cat_num)
+            Process(target=parse, args=(url, cat_num, title)).start()
 
     def run(self):
         """
@@ -143,5 +155,4 @@ class Parser:
 
 
 if __name__ == '__main__':
-    # Parser().run()
-    cProfile.run('Parser().run()')
+    Parser().run()
