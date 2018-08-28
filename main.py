@@ -38,7 +38,7 @@ class Parser:
 
         return html
 
-    def parse_all_cats(self):
+    def parse_cats(self):
         """
         Method which parse categories urls , titles, add index number and insert them into db.
         :return:
@@ -58,80 +58,87 @@ class Parser:
         """
         return self.mongo.find({}, 'cats_icobazaar')
 
+    def parse(self, cat_url, cat_num, cat_title):
+        """
+        Method which parse specific category url.
+        :param cat_url:
+        :param cat_num:
+        :param cat_title:
+        :return:
+        """
+        count = 1
+
+        while True:
+            time.sleep(2)
+            bs = BeautifulSoup(self.get_html(cat_url), 'lxml')
+
+            # Get ico full description links.
+            ico_full_desc_links = bs.findAll('a', {'class': 'ico-link'})
+            ico_full_desc_links = [ico_link['href'] for ico_link in ico_full_desc_links]
+
+            # Check on clear list.
+            if not ico_full_desc_links:
+                print('page #{} not exist'.format(count))
+
+                break
+
+            # Get ico logos.
+            imgs_src = bs.findAll('div', {'class': 'ico-image'})
+            imgs_src = [img_url.find('img')['src'] for img_url in imgs_src]
+
+            # Get ico names.
+            ico_names = bs.findAll('h5')
+            ico_names = [name.text for name in ico_names]
+
+            # Get updated date.
+            updated_dates = bs.findAll('div', {'class': 'campaign_update_widget'})
+            updated_dates = [updated_date.find('span').text for updated_date in updated_dates]
+
+            # Get ico short description texts.
+            ico_texts = bs.findAll('div', {'class': 'ico-text'})
+            ico_texts = [ico_text.text for ico_text in ico_texts]
+
+            # Get ico statuses.
+            ico_statuses = bs.findAll('div', {'class': 'ico-condition'})
+            ico_statuses = [ico_status.find('div').text for ico_status in ico_statuses]
+
+            # Get ico dates.
+            ico_dates = bs.findAll('div', {'class': 'ico-date'})
+            ico_dates = [ico_date.text for ico_date in ico_dates]
+
+            # Get ico text ratings.
+            ico_text_ratings = bs.findAll('div', {'class': 'ico-eva_class'})
+            ico_text_ratings = [ico_text_rating.text for ico_text_rating in ico_text_ratings]
+
+            # Get ico stars ratings.
+            ico_stars_ratings = bs.findAll('i', {'class': re.compile('[star] \w{0,4}')})
+            ico_stars_ratings = [ico_stars_rating['class'] for ico_stars_rating in ico_stars_ratings]
+            ico_stars_ratings = libs.utils.run_rate_transform(ico_stars_ratings)
+
+            # Clear category title. Change symbols in collections names (%^* etc) to _.
+            title2 = libs.utils.clear_title(cat_title)
+
+            # Insert data into db.
+            mongo = pymongodb.MongoDB('icobazaar')
+
+            for i in range(0, len(ico_full_desc_links)):
+                mongo.insert_one({'ico_full_desc_link': ico_full_desc_links[i], 'img_src': imgs_src[i],
+                                  'ico_name': ico_names[i], 'updated_date': updated_dates[i],
+                                  'ico_text': ico_texts[i], 'ico_status': ico_statuses[i],
+                                  'ico_date': ico_dates[i], 'ico_text_rating': ico_text_ratings[i],
+                                  'ico_star_rating': ico_stars_ratings[i]}, title2)
+                mongo.finish()
+
+            count += 1
+            cat_url = self.ICO_LIST_PAGINATION_URL.format(cat_num, count)
+
     def parse_cats_data(self, documents):
         """
         Method which parse data for all categories and insert them into db.
         :param documents:
         :return:
         """
-        # Написать код для парсинга одоной отдельной категории.
-        def parse(url, cat_num, title):
-            count = 1
-
-            while True:
-                time.sleep(2)
-                bs = BeautifulSoup(self.get_html(url), 'lxml')
-
-                # Get ico full description links.
-                ico_full_desc_links = bs.findAll('a', {'class': 'ico-link'})
-                ico_full_desc_links = [ico_link['href'] for ico_link in ico_full_desc_links]
-
-                # Check on clear list.
-                if not ico_full_desc_links:
-                    print('page #{} not exist'.format(count))
-
-                    break
-
-                # Get ico logos.
-                imgs_src = bs.findAll('div', {'class': 'ico-image'})
-                imgs_src = [img_url.find('img')['src'] for img_url in imgs_src]
-
-                # Get ico names.
-                ico_names = bs.findAll('h5')
-                ico_names = [name.text for name in ico_names]
-
-                # Get updated date.
-                updated_dates = bs.findAll('div', {'class': 'campaign_update_widget'})
-                updated_dates = [updated_date.find('span').text for updated_date in updated_dates]
-
-                # Get ico short description texts.
-                ico_texts = bs.findAll('div', {'class': 'ico-text'})
-                ico_texts = [ico_text.text for ico_text in ico_texts]
-
-                # Get ico statuses.
-                ico_statuses = bs.findAll('div', {'class': 'ico-condition'})
-                ico_statuses = [ico_status.find('div').text for ico_status in ico_statuses]
-
-                # Get ico dates.
-                ico_dates = bs.findAll('div', {'class': 'ico-date'})
-                ico_dates = [ico_date.text for ico_date in ico_dates]
-
-                # Get ico text ratings.
-                ico_text_ratings = bs.findAll('div', {'class': 'ico-eva_class'})
-                ico_text_ratings = [ico_text_rating.text for ico_text_rating in ico_text_ratings]
-
-                # Get ico stars ratings.
-                ico_stars_ratings = bs.findAll('i', {'class': re.compile('[star] \w{0,4}')})
-                ico_stars_ratings = [ico_stars_rating['class'] for ico_stars_rating in ico_stars_ratings]
-                ico_stars_ratings = libs.utils.run_rate_transform(ico_stars_ratings)
-
-                # Clear category title. Change symbols in collections names (%^* etc) to _.
-                title2 = libs.utils.clear_title(title)
-
-                mongo = pymongodb.MongoDB('icobazaar')
-
-                # Insert data into db.
-                for i in range(0, len(ico_full_desc_links)):
-                    mongo.insert_one({'ico_full_desc_link': ico_full_desc_links[i], 'img_src': imgs_src[i],
-                                      'ico_name': ico_names[i], 'updated_date': updated_dates[i],
-                                      'ico_text': ico_texts[i], 'ico_status': ico_statuses[i],
-                                      'ico_date': ico_dates[i], 'ico_text_rating': ico_text_ratings[i],
-                                      'ico_star_rating': ico_stars_ratings[i]}, title2)
-                    mongo.finish()
-
-                count += 1
-                url = self.ICO_LIST_PAGINATION_URL.format(cat_num, count)
-
+        # Set links , cats nums, cats titles into lists.
         urls_list = []
         cats_nums = []
         titles_list = []
@@ -141,16 +148,16 @@ class Parser:
             cats_nums.append(item['cat_num'])
             titles_list.append(item['title'])
 
-        for url, cat_num, title in zip(urls_list, cats_nums, titles_list):
-            # foo(url, cat_num)
-            Process(target=parse, args=(url, cat_num, title)).start()
+        # Create processes for parse projects of each category.
+        [Process(target=self.parse, args=(url, cat, title)).start()
+         for url, cat, title in zip(urls_list, cats_nums, titles_list)]
 
     def run(self):
         """
         Method which start parsing all ico categories and then data from all categories.
         :return:
         """
-        self.parse_all_cats()                               # Parse all ico categories.
+        self.parse_cats()                               # Parse all ico categories.
         self.parse_cats_data(self.get_cats_documents())     # Parse data from all categories.
 
 
