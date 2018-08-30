@@ -43,7 +43,9 @@ def create_cats_data_list(bsobj_cats):
 
     for cat in bsobj_cats:
         cat_num += 1
-        data.append({'title': cat['title'], 'link': cat['href'], 'cat_num': cat_num})
+
+        if 'upcoming' not in cat['href'] and 'ongoing' not in cat['href'] and 'all' not in cat['href']:
+            data.append({'title': cat['title'], 'link': cat['href'], 'cat_num': cat_num})
 
     return data
 
@@ -58,3 +60,34 @@ def clear_title(cat_title):
 
     except AttributeError:
         return cat_title.replace(' ', '_')
+
+
+# Func which split range into nums.
+def split_range_into_nums(diaposon):
+    lst = []
+    [lst.append(num) for num in range(diaposon[0], diaposon[1] + 1) if num != 0]
+
+    return lst
+
+
+# Func which split num by diapasons , like -> 15: (0,2),(3,5)...etc.
+def split_num_by_diapasons(step, num):
+    lst = []
+
+    for i in range(0, round(step)):
+        if i * 3 + 2 + 3 < num:
+            lst.append((i * 3, i * 3 + 2))
+
+        else:
+            lst.append((i * 3, num))
+            break
+
+    lst = list(map(split_range_into_nums, lst))
+
+    return lst
+
+
+# Func which search specific status in url.
+def search_status(url):
+    pattern = re.compile(r'ended|upcoming|ongoing')
+    return re.search(pattern, url).group()

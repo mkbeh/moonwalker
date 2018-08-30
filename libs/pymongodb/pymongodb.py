@@ -17,7 +17,7 @@ class JSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-class MongoDB():
+class MongoDB(object):
     def __init__(self, db_name):
         try:
             cxn = MongoClient()
