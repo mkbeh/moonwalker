@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import re
 
+from libs.pymongodb import pymongodb
+
 
 # Func which converting text rate like ['star', 'full'] into int like 1
 def convert_text_rate_into_int(item):
@@ -71,7 +73,7 @@ def split_range_into_nums(diaposon):
 
 
 # Func which split num by diapasons , like -> 15: (0,2),(3,5)...etc.
-def split_num_by_diapasons(step, num):
+def split_num_by_ranges(step, num):
     lst = []
 
     for i in range(0, round(step)):
@@ -91,3 +93,13 @@ def split_num_by_diapasons(step, num):
 def search_status(url):
     pattern = re.compile(r'ended|upcoming|ongoing')
     return re.search(pattern, url).group()
+
+
+def sort_col_docs():
+    collections_names = ['ended', 'upcoming', 'ongoing']
+
+    for col_name in collections_names:
+        mongo = pymongodb.MongoDB('icobazaar')
+        sorted_docs = mongo.find_with_sort(col_name, 'ico_star_rating')
+        mongo.drop_collection(col_name)
+        mongo.insert_many(sorted_docs, col_name)

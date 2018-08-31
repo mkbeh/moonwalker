@@ -65,12 +65,13 @@ class Parser:
         return self.mongo.find({}, 'cats_icobazaar')
 
     @staticmethod
-    def find_and_write_data(bs_obj, cat_title, count=None):
+    def find_and_write_data(bs_obj, cat_title, count=None, temp_store=False):
         """
         Method which find specific data in page and write it into db.
         :param bs_obj:
         :param cat_title:
         :param count:
+        :param temp_store:
         :return:
         """
         # Get ico full description links.
@@ -185,8 +186,8 @@ class Parser:
 
         return max(pages_nums)
 
-    def parse_diaposon(self, url, diaposon):
-        for page_num in diaposon:
+    def parse_range(self, url, range_):
+        for page_num in range_:
             status_name = libs.utils.search_status(url)  # Eject cat status name.
 
             html = self.get_html(url.format(page_num))   # Get url page num.
@@ -206,11 +207,11 @@ class Parser:
         time.sleep(2)
 
         # Get diapasons for pages amount.
-        diapasons = libs.utils.split_num_by_diapasons(pages_amount / 3, pages_amount)
+        ranges = libs.utils.split_num_by_ranges(pages_amount / 3, pages_amount)
 
         # Parse every diapason of pages in own process.
-        for diaposon in diapasons:
-            Process(target=self.parse_diaposon, args=(url, diaposon)).start()
+        for range_ in ranges:
+            Process(target=self.parse_range, args=(url, range_)).start()
 
     def run(self):
         """
@@ -221,7 +222,13 @@ class Parser:
         self.parse_cats_data(self.get_cats_documents())     # Parse data from all categories.
 
         # Parse specific urls like ...ongoing , ...upcoming, ...ended.
-        [Process(target=self.parse_specific_ulrs, args=(url,)).start() for url in self.SPECIFIC_URLS_LIST]
+        for url in self.SPECIFIC_URLS_LIST:
+            ps = Process(target=self.parse_specific_ulrs, args=(url,))
+            ps.start()
+            ps.join()
+
+        # Sort collections ended, upcoming, ongoing in mongo.
+        libs.utils.sort_col_docs()
 
 
 if __name__ == '__main__':

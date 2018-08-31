@@ -4,6 +4,7 @@ import json
 
 from pymongo import MongoClient, errors
 from pymongo import ReturnDocument
+from pymongo import ASCENDING, DESCENDING
 from bson.objectid import ObjectId
 
 
@@ -104,6 +105,10 @@ class MongoDB(object):
 
         return document
 
+    def insert_many(self, documents, collection_name):
+        self.collection = self.db[collection_name]
+        self.collection.insert_many(documents)
+
     def delete_one(self, filter_, collection_name):
         self.collection = self.db[collection_name]
 
@@ -120,6 +125,26 @@ class MongoDB(object):
         self.collection = self.db[collection_name]
 
         return self.collection.count(filter_)
+
+    def find_with_sort(self, collection_name, field, sort=1):
+        self.collection = self.db[collection_name]
+
+        if sort == 1:
+            sort = DESCENDING
+        elif sort == 0:
+            sort = ASCENDING
+
+        docs_list = []
+
+        for doc in self.collection.find().sort(field, sort):
+            docs_list.append(doc)
+
+        return docs_list
+
+    def drop_collection(self, collection_name):
+        self.collection = self.db[collection_name]
+
+        self.collection.drop()
 
     def finish(self):
         self.db.logout()
