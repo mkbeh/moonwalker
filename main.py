@@ -2,15 +2,16 @@
 import time
 import re
 
+import requests
+
 from multiprocessing import Process
 
-import requests
-import libs.utils
-import libs.decorators
-
 from bs4 import BeautifulSoup
-from libs.pymongodb import pymongodb
 from torrequest import TorRequest
+
+from libs.pymongodb import pymongodb
+from libs import decorators
+from libs import utils
 
 
 class Parser:
@@ -53,7 +54,7 @@ class Parser:
         bs = BeautifulSoup(self.get_html(self.ICO_LIST_URL), 'lxml')
         cats = bs.findAll('a', {'class': 'filter-seo-link'})
 
-        data = libs.utils.create_cats_data_list(cats)                       # Create cats data list.
+        data = utils.create_cats_data_list(cats)                       # Create cats data list.
 
         [self.mongo.insert_one(item, 'cats_icobazaar') for item in data]    # Insert data into db.
         self.mongo.finish()
@@ -66,13 +67,12 @@ class Parser:
         return self.mongo.find({}, 'cats_icobazaar')
 
     @staticmethod
-    def find_and_write_data(bs_obj, cat_title, count=None, temp_store=False):
+    def find_and_write_data(bs_obj, cat_title, count=None):
         """
         Method which find specific data in page and write it into db.
         :param bs_obj:
         :param cat_title:
         :param count:
-        :param temp_store:
         :return:
         """
         # Get ico full description links.
@@ -116,10 +116,10 @@ class Parser:
         # Get ico stars ratings.
         ico_stars_ratings = bs_obj.findAll('i', {'class': re.compile('[star] \w{0,4}')})
         ico_stars_ratings = [ico_stars_rating['class'] for ico_stars_rating in ico_stars_ratings]
-        ico_stars_ratings = libs.utils.run_rate_transform(ico_stars_ratings)
+        ico_stars_ratings = utils.run_rate_transform(ico_stars_ratings)
 
         # Clear category title. Change symbols (whitespaces and &) in collections names to _.
-        title2 = libs.utils.clear_title(cat_title)
+        title2 = utils.clear_title(cat_title)
 
         # Insert data into db.
         mongo = pymongodb.MongoDB('icobazaar')
@@ -189,7 +189,7 @@ class Parser:
 
     def parse_range(self, url, range_):
         for page_num in range_:
-            status_name = libs.utils.search_status(url)  # Eject cat status name.
+            status_name = utils.search_status(url)  # Eject cat status name.
 
             html = self.get_html(url.format(page_num))   # Get url page num.
             bs = BeautifulSoup(html, 'lxml')
@@ -208,13 +208,13 @@ class Parser:
         time.sleep(2)
 
         # Get diapasons for pages amount.
-        ranges = libs.utils.split_num_by_ranges(pages_amount / 3, pages_amount)
+        ranges = utils.split_num_by_ranges(pages_amount / 3, pages_amount)
 
         # Parse every diapason of pages in own process.
         for range_ in ranges:
             Process(target=self.parse_range, args=(url, range_)).start()
 
-    @libs.decorators.log
+    @decorators.log
     def run(self):
         """
         Method which start parsing all ico categories and then data from all categories.
@@ -231,12 +231,11 @@ class Parser:
             ps.join()
 
         # Sort collections ended, upcoming, ongoing in mongo.
-        libs.utils.sort_col_docs()
+        utils.sort_col_docs()
 
 
 if __name__ == '__main__':
     try:
         Parser().run()
     except:
-        libs.utils.logger('Success status: %s' % 'ERROR', 'moonwalker.log')
-
+        utils.logger('Success status: %s' % 'ERROR', 'moonwalker.log')
