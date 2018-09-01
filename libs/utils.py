@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import logging
 
 from libs.pymongodb import pymongodb
 
@@ -95,6 +96,7 @@ def search_status(url):
     return re.search(pattern, url).group()
 
 
+# Func which sort collection docs for cats: ended, upcoming, ongoing.
 def sort_col_docs():
     collections_names = ['ended', 'upcoming', 'ongoing']
 
@@ -103,3 +105,16 @@ def sort_col_docs():
         sorted_docs = mongo.find_with_sort(col_name, 'ico_star_rating')
         mongo.drop_collection(col_name)
         mongo.insert_many(sorted_docs, col_name)
+
+
+# Func which logging message into file.
+def logger(msg, file):
+    logger = logging.getLogger('Main')
+    logger.setLevel(logging.INFO)
+
+    fh = logging.FileHandler(file)
+    fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    formatter = logging.Formatter(fmt)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    logger.info(msg)

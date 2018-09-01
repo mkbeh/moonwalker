@@ -6,6 +6,7 @@ from multiprocessing import Process
 
 import requests
 import libs.utils
+import libs.decorators
 
 from bs4 import BeautifulSoup
 from libs.pymongodb import pymongodb
@@ -213,11 +214,13 @@ class Parser:
         for range_ in ranges:
             Process(target=self.parse_range, args=(url, range_)).start()
 
+    @libs.decorators.log
     def run(self):
         """
         Method which start parsing all ico categories and then data from all categories.
         :return:
         """
+        self.mongo.drop_database()                          # Drop db for parse new data.
         self.parse_cats()                                   # Parse all ico categories.
         self.parse_cats_data(self.get_cats_documents())     # Parse data from all categories.
 
@@ -232,4 +235,8 @@ class Parser:
 
 
 if __name__ == '__main__':
-    Parser().run()
+    try:
+        Parser().run()
+    except:
+        libs.utils.logger('Success status: %s' % 'ERROR', 'moonwalker.log')
+

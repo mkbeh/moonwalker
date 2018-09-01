@@ -8,9 +8,6 @@ from pymongo import ASCENDING, DESCENDING
 from bson.objectid import ObjectId
 
 
-# DB_NAME = 'aggregators'
-
-
 class JSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, ObjectId):
@@ -21,13 +18,13 @@ class JSONEncoder(json.JSONEncoder):
 class MongoDB(object):
     def __init__(self, db_name):
         try:
-            cxn = MongoClient()
+            self.cxn = MongoClient()
         except errors.AutoReconnect:
             raise RuntimeError()
 
         self.db_name = db_name
 
-        self.db = cxn[self.db_name]
+        self.db = self.cxn[self.db_name]
         self.collection = None
 
     def db_dump(self):
@@ -140,6 +137,9 @@ class MongoDB(object):
             docs_list.append(doc)
 
         return docs_list
+
+    def drop_database(self):
+        self.cxn.drop_database(self.db_name)
 
     def drop_collection(self, collection_name):
         self.collection = self.db[collection_name]
